@@ -1,4 +1,5 @@
 import tkinter as tk
+from ctypes import windll
 from tkinter import ttk
 from tkinter import filedialog
 from tkinter.messagebox import showerror
@@ -30,7 +31,7 @@ class SelectionPanel:
         norm_font = ("Arial", 12)
 
         # monster generator wcid combo boxe
-        mgen_combo_label = tk.Label(self.frame, text="Monster Generator WCID")
+        mgen_combo_label = tk.Label(self.frame, text="Monster generator WCID")
         self.mgen_combo = ttk.Combobox(self.frame, values=["7924"], font=norm_font)
         self.mgen_combo.current(0)
 
@@ -314,6 +315,10 @@ class Launcher:
 
 
 def main():
+    # if on Windows, fix blurry font
+    if os.name == 'nt':
+        windll.shcore.SetProcessDpiAwareness(1)
+
     root = tk.Tk()
     root.title("AC Spawn Maps")
     Launcher(root)
