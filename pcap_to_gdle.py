@@ -209,16 +209,16 @@ class PcapConverter:
 
         return LandblockLoc(ox, oy, oz, aw, ax, ay, az, cell_dec)
 
-    def clean_list(self, filtered_list, ignore_wcids):
+    def get_clean_list(self, filtered_list, ignore_wcids):
 
-        clean_list = []
+        my_list = []
         for entry in filtered_list:
             if entry.wcid in ignore_wcids:
                 pass
             else:
-                clean_list.append(entry)
+                my_list.append(entry)
 
-        return clean_list
+        return my_list
 
     def output_map(self, nickname, land_desc, filtered_list, monster_links, item_links):
 

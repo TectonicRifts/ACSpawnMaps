@@ -12,20 +12,19 @@ import os
 # output console
 class Console:
 
-    def __init__(self, parent):
+    def __init__(self, parent, cont):
         self.frame = tk.Frame(parent)
 
         self.text_area = tk.scrolledtext.ScrolledText(self.frame, height=5, width=50, undo=True)
         self.text_area.configure(state='disabled')
-        self.text_area.pack()
 
-        self.frame.pack()
+        self.text_area.grid(row=0, column=0, padx=5, pady=5)
 
 
 # panel where you select monsters and items
 class SelectionPanel:
 
-    def __init__(self, parent):
+    def __init__(self, parent, cont):
         self.frame = tk.Frame(parent)
 
         norm_font = ("Arial", 12)
@@ -53,19 +52,19 @@ class SelectionPanel:
 
         # monster selection listbox
         mob_listbox_label = tk.Label(self.frame, text="Select Monsters", font=norm_font)
-        my_tuple = self.make_listbox(self.frame, norm_font, "multiple")
+        my_tuple = self.make_listbox(self.frame, norm_font, "extended")
         mob_frame = my_tuple[0]
         self.mob_listbox = my_tuple[1]
 
         # item selection listbox
         item_listbox_label = tk.Label(self.frame, text="Select Items", font=norm_font)
-        my_tuple = self.make_listbox(self.frame, norm_font, "multiple")
+        my_tuple = self.make_listbox(self.frame, norm_font, "extended")
         item_frame = my_tuple[0]
         self.item_listbox = my_tuple[1]
 
         # ignore listbox
         ignore_listbox_label = tk.Label(self.frame, text="Select Ignore", font=norm_font)
-        my_tuple = self.make_listbox(self.frame, norm_font, "multiple")
+        my_tuple = self.make_listbox(self.frame, norm_font, "extended")
         ignore_frame = my_tuple[0]
         self.ignore_listbox = my_tuple[1]
 
@@ -87,13 +86,11 @@ class SelectionPanel:
         ignore_listbox_label.grid(row=4, column=2, padx=5, pady=5)
         ignore_frame.grid(row=5, column=2, padx=5, pady=5)
 
-        self.frame.pack()
-
     def make_listbox(self, parent, my_font, selection_mode):
         """Returns a frame and a listbox with a vertical scrollbar."""
         frame = tk.Frame(parent)
 
-        listbox = tk.Listbox(frame, selectmode=selection_mode, font=my_font)
+        listbox = tk.Listbox(frame, selectmode=selection_mode, font=my_font, exportselection=0)
         listbox['width'] = 30
         listbox.pack(side="left", fill="y")
 
@@ -108,10 +105,14 @@ class SelectionPanel:
         return [self.mob_listbox, self.item_listbox, self.ignore_listbox]
 
     def get_selected(self, listbox):
-        values = [listbox.get(idx) for idx in listbox.curselection()]
         wcids = []
-        for i in range(len(values)):
-            wcids.append(values[i].split(',')[0])
+
+        selection = listbox.curselection()
+        for i in selection:
+            entry = listbox.get(i)
+            split = entry.split(",")
+            wcid = int(split[0])
+            wcids.append(wcid)
 
         return wcids
 
@@ -119,39 +120,55 @@ class SelectionPanel:
 # form where you fill out basic information
 class TopPanel:
 
-    def __init__(self, parent):
+    def __init__(self, parent, cont):
         self.frame = tk.Frame(parent)
 
         # landblock description
         label1 = tk.Label(self.frame, text="Landblock Description")
-        label1.pack()
-
         self.desc_entry = tk.Entry(self.frame, bg="white")
-        self.desc_entry.pack()
 
         # nickname
         label2 = tk.Label(self.frame, text="Nickname")
-        label2.pack()
 
         self.nickname_entry = tk.Entry(self.frame, bg="white")
         self.nickname_entry.insert(tk.END, "Asheron")
-        self.nickname_entry.pack()
 
-        self.frame.pack()
+        # layout
+        label1.grid(row=0, column=0, padx=5, pady=5)
+        self.desc_entry.grid(row=0, column=1, padx=5, pady=5)
+        label2.grid(row=1, column=0, padx=5, pady=5)
+        self.nickname_entry.grid(row=1, column=1, padx=5, pady=5)
+
+
+class View:
+
+    def __init__(self, parent, cont):
+        self.frame = tk.Frame(parent)
+        self.cont = cont
+
+        self.top_panel = TopPanel(self.frame, cont)
+        self.toolbar = Toolbar(self.frame, cont)
+        self.console = Console(self.frame, cont)
+        self.selection_panel = SelectionPanel(self.frame, cont)
+        self.bottom_panel = BottomPanel(self.frame, cont)
+
+        # layout
+        self.top_panel.frame.grid(row=0, column=0, padx=5, pady=5)
+        self.toolbar.frame.grid(row=1, column=0, padx=5, pady=5)
+        self.console.frame.grid(row=2, column=0, padx=5, pady=5)
+        self.selection_panel.frame.grid(row=3, column=0, padx=5, pady=5)
+        self.bottom_panel.frame.grid(row=4, column=0, padx=5, pady=5)
+
+        self.frame.grid()
 
 
 class Controller:
 
-    def __init__(self, frame):
+    def __init__(self, parent):
 
+        self.view = View(parent, self)
         self.pcap_converter = pcap_to_gdle.PcapConverter()
-
-        self.form = TopPanel(frame)
-        self.inspect = Toolbar(frame, self)
-        self.console = Console(frame)
-        self.select = SelectionPanel(frame)
         self.input_file = None
-
         self.filtered_list = []
 
     def open_landblock_pcap(self):
@@ -161,13 +178,13 @@ class Controller:
         if self.input_file:
 
             # output what it's opening to console
-            self.console.text_area.configure(state='normal')
-            self.console.text_area.delete('1.0', tk.END)
-            self.console.text_area.insert('1.0', "Opening " + os.path.split(self.input_file)[1] + "...\n")
-            self.console.text_area.configure(state='disabled')
+            self.view.console.text_area.configure(state='normal')
+            self.view.console.text_area.delete('1.0', tk.END)
+            self.view.console.text_area.insert('1.0', "Opening " + os.path.split(self.input_file)[1] + "...\n")
+            self.view.console.text_area.configure(state='disabled')
 
             # get a list of wcids in the pcap
-            self.filtered_list = self.pcap_converter.load_pcap(self.input_file, self.inspect.threshold_scale.get())
+            self.filtered_list = self.pcap_converter.load_pcap(self.input_file, self.view.toolbar.threshold_scale.get())
 
             uniques = {}
 
@@ -175,7 +192,7 @@ class Controller:
             for entry in self.filtered_list:
                 uniques[entry.wcid] = entry.name
 
-            listbox_list = self.select.get_list_boxes()
+            listbox_list = self.view.selection_panel.get_list_boxes()
 
             for k, v in sorted(uniques.items()):  # sort and output
                 i = 0
@@ -184,27 +201,27 @@ class Controller:
                     listbox.insert(i, str(k) + ',' + str(v))
                     i += 1
 
-            self.inspect.make_map_button["state"] = "normal"
+            self.view.toolbar.make_map_button["state"] = "normal"
 
     def make_gdle_spawn_map(self):
         """Make a gdle spawn map from a pcap landblock file."""
 
         if self.input_file:
 
-            monster_wcids = self.select.get_selected(self.select.mob_listbox)
-            item_wcids = self.select.get_selected(self.select.item_listbox)
-            ignore_wcids = self.select.get_selected(self.select.ignore_listbox)
+            monster_wcids = self.view.selection_panel.get_selected(self.view.selection_panel.mob_listbox)
+            item_wcids = self.view.selection_panel.get_selected(self.view.selection_panel.item_listbox)
+            ignore_wcids = self.view.selection_panel.get_selected(self.view.selection_panel.ignore_listbox)
 
             # remove whatever's in the ignore wcid list
-            cleaned_list = self.pcap_converter.clean_list(self.filtered_list, ignore_wcids)
+            cleaned_list = self.pcap_converter.get_clean_list(self.filtered_list, ignore_wcids)
 
             # get monster and item generator wcids
-            mgen_wcid = self.select.mgen_combo.get().strip()
-            igen_wcid = self.select.igen_combo.get().strip()
+            mgen_wcid = self.view.selection_panel.mgen_combo.get().strip()
+            igen_wcid = self.view.selection_panel.igen_combo.get().strip()
 
             # get monster and item generator locs
-            mgen_loc = self.select.mgen_loc_entry.get().strip()
-            igen_loc = self.select.igen_loc_entry.get().strip()
+            mgen_loc = self.view.selection_panel.mgen_loc_entry.get().strip()
+            igen_loc = self.view.selection_panel.igen_loc_entry.get().strip()
 
             if not mgen_loc or not igen_loc:
                 showerror("Error", "The monster and item generator locations are required.")
@@ -216,38 +233,38 @@ class Controller:
             item_links = self.pcap_converter.get_links(cleaned_list, igen_wcid, "Item Generator", item_wcids, igen_loc)
 
             landblock_desc = None
-            if len(self.form.desc_entry.get()) > 0:
-                landblock_desc = self.form.desc_entry.get()
+            if len(self.view.top_panel.desc_entry.get()) > 0:
+                landblock_desc = self.view.top_panel.desc_entry.get()
             else:
                 showerror("Error", "The landblock description is required.")
                 return
 
             nickname = "Asheron"
-            if len(self.form.nickname_entry.get()) > 0:
-                nickname = self.form.nickname_entry.get()
+            if len(self.view.top_panel.nickname_entry.get()) > 0:
+                nickname = self.view.top_panel.nickname_entry.get()
 
             self.pcap_converter.output_map(nickname, landblock_desc, cleaned_list, monster_links, item_links)
 
             # output what it's opening to console
-            self.console.text_area.configure(state='normal')
-            self.console.text_area.delete('1.0', tk.END)
-            self.console.text_area.insert('1.0', "Done")
-            self.console.text_area.configure(state='disabled')
+            self.view.console.text_area.configure(state='normal')
+            self.view.console.text_area.delete('1.0', tk.END)
+            self.view.console.text_area.insert('1.0', "Done")
+            self.view.console.text_area.configure(state='disabled')
 
 
 # use to inspect a landblock
 class Toolbar:
 
-    def __init__(self, parent, controller):
+    def __init__(self, parent, cont):
         self.frame = tk.Frame(parent)
 
         inspect_label = tk.Label(self.frame, text="Make GDLE Spawn Map", font="Arial 12")
-        open_pcap_button = tk.Button(self.frame, text="Open PCAP", command=controller.open_landblock_pcap)
+        open_pcap_button = tk.Button(self.frame, text="Open PCAP", command=cont.open_landblock_pcap)
 
         threshold_label = tk.Label(self.frame, text="Seen more than")
         self.threshold_scale = tk.Scale(self.frame, from_=0, to=10, orient=tk.HORIZONTAL)
         self.threshold_scale.set(1)
-        self.make_map_button = tk.Button(self.frame, text="Make Map", command=controller.make_gdle_spawn_map)
+        self.make_map_button = tk.Button(self.frame, text="Make Map", command=cont.make_gdle_spawn_map)
         self.make_map_button["state"] = "disabled"
 
         # layout
@@ -257,14 +274,13 @@ class Toolbar:
         threshold_label.grid(row=1, column=0, padx=5, pady=5)
         self.threshold_scale.grid(row=1, column=1, padx=5, pady=5)
 
-        self.frame.pack()
-
 
 # use to convert spawn maps
 class BottomPanel:
 
-    def __init__(self, parent, controller):
+    def __init__(self, parent, cont):
         self.frame = tk.Frame(parent)
+        self.cont = cont
 
         # convert a gdle spawn map json to an ace spawn map sql
         label2 = tk.Label(self.frame, text="Batch convert (GDLE to ACE)", font="Arial 12")
@@ -273,8 +289,6 @@ class BottomPanel:
 
         label2.grid(row=0, column=0, padx=5, pady=5)
         open_landblock_folder.grid(row=0, column=1, padx=5, pady=5)
-
-        self.frame.pack()
 
     def batch_convert_gdle_to_ace(self):
         """Convert a batch of GDLE spawn maps to ACE format."""
@@ -303,17 +317,6 @@ class BottomPanel:
         return set(wcid_list)
 
 
-class Launcher:
-
-    def __init__(self, root):
-        self.frame = tk.Frame(root)
-
-        self.controller = Controller(self.frame)
-        self.convert = BottomPanel(self.frame, self.controller)
-
-        self.frame.pack()
-
-
 def main():
     # if on Windows, fix blurry font
     if os.name == 'nt':
@@ -321,7 +324,7 @@ def main():
 
     root = tk.Tk()
     root.title("AC Spawn Maps")
-    Launcher(root)
+    Controller(root)
     root.mainloop()
 
 

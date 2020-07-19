@@ -127,7 +127,7 @@ def convert_spawn_map(file_folder, file_name):
         unique_targets = set(targets)
 
         for generator in unique_targets:
-            file_object.write("DELETE FROM `landblock_instance_link` WHERE `parent_GUID` =" + str(generator) + ";\n\n")
+            file_object.write("DELETE FROM `landblock_instance_link` WHERE `parent_GUID` = " + str(generator) + ";\n\n")
 
         # this handles case of multiple generators (e.g., both monster and item)
         previous_target = 0
