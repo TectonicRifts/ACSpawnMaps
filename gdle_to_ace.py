@@ -3,7 +3,12 @@ import datetime
 import os
 
 
-def convert_spawn_map(file_folder, file_name):
+def batch_convert_spawn_map(file_folder, file_name):
+
+    with open(os.path.join(file_folder, file_name)) as file_object:
+        convert_spawn_map(file_object)
+
+def convert_spawn_map(file_name):
     """Convert a GDLE spawn map to ACE sql format."""
 
     landblock_4 = ""
@@ -22,7 +27,7 @@ def convert_spawn_map(file_folder, file_name):
     sources = []  # child
     targets = []  # parent
 
-    with open(os.path.join(file_folder, file_name)) as file_object:
+    with open(file_name) as file_object:
         my_json = json.load(file_object)
 
         wcid = 0

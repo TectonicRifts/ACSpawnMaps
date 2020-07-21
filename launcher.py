@@ -20,6 +20,12 @@ class Console:
 
         self.text_area.grid(row=0, column=0, padx=5, pady=5)
 
+    def output(self, s):
+        self.text_area.configure(state='normal')
+        # self.text_area.delete('1.0', tk.END)
+        self.text_area.insert(tk.INSERT, s + "\n")
+        self.text_area.configure(state='disabled')
+
 
 # panel where you select monsters and items
 class SelectionPanel:
@@ -87,7 +93,7 @@ class SelectionPanel:
         ignore_frame.grid(row=5, column=2, padx=5, pady=5)
 
     def make_listbox(self, parent, my_font, selection_mode):
-        """Returns a frame and a listbox with a vertical scrollbar."""
+        """Returns a tuple with a frame and a listbox with a vertical scrollbar."""
         frame = tk.Frame(parent)
 
         listbox = tk.Listbox(frame, selectmode=selection_mode, font=my_font, exportselection=0)
@@ -105,6 +111,7 @@ class SelectionPanel:
         return [self.mob_listbox, self.item_listbox, self.ignore_listbox]
 
     def get_selected(self, listbox):
+        """Returns a list of WCIDs for selected entries in a listbox."""
         wcids = []
 
         selection = listbox.curselection()
@@ -124,7 +131,7 @@ class TopPanel:
         self.frame = tk.Frame(parent)
 
         # landblock description
-        label1 = tk.Label(self.frame, text="Landblock Description")
+        label1 = tk.Label(self.frame, text="Landblock")
         self.desc_entry = tk.Entry(self.frame, bg="white")
 
         # nickname
@@ -177,11 +184,10 @@ class Controller:
 
         if self.input_file:
 
-            # output what it's opening to console
-            self.view.console.text_area.configure(state='normal')
-            self.view.console.text_area.delete('1.0', tk.END)
-            self.view.console.text_area.insert('1.0', "Opening " + os.path.split(self.input_file)[1] + "...\n")
-            self.view.console.text_area.configure(state='disabled')
+            file_name = os.path.split(self.input_file)[1]
+            self.view.console.output("Opening " + file_name + "...")
+            self.view.top_panel.desc_entry.delete(0, tk.END)
+            self.view.top_panel.desc_entry.insert(0, file_name[:4].upper())
 
             # get a list of wcids in the pcap
             self.filtered_list = self.pcap_converter.load_pcap(self.input_file, self.view.toolbar.threshold_scale.get())
@@ -194,6 +200,11 @@ class Controller:
 
             listbox_list = self.view.selection_panel.get_list_boxes()
 
+            # clear listboxes
+            for listbox in listbox_list:
+                listbox.delete(0, tk.END)
+
+            # add entries
             for k, v in sorted(uniques.items()):  # sort and output
                 i = 0
 
@@ -212,9 +223,6 @@ class Controller:
             item_wcids = self.view.selection_panel.get_selected(self.view.selection_panel.item_listbox)
             ignore_wcids = self.view.selection_panel.get_selected(self.view.selection_panel.ignore_listbox)
 
-            # remove whatever's in the ignore wcid list
-            cleaned_list = self.pcap_converter.get_clean_list(self.filtered_list, ignore_wcids)
-
             # get monster and item generator wcids
             mgen_wcid = self.view.selection_panel.mgen_combo.get().strip()
             igen_wcid = self.view.selection_panel.igen_combo.get().strip()
@@ -223,33 +231,45 @@ class Controller:
             mgen_loc = self.view.selection_panel.mgen_loc_entry.get().strip()
             igen_loc = self.view.selection_panel.igen_loc_entry.get().strip()
 
-            if not mgen_loc or not igen_loc:
-                showerror("Error", "The monster and item generator locations are required.")
+            if not mgen_loc and len(monster_wcids) > 0:
+                showerror("Error", "The monster generator location is required.")
                 return
+            if not igen_loc and len(item_wcids) > 0:
+                showerror("Error", "The item generator location is required.")
+                return
+
+            my_list = []
+
+            # make sure selected monsters and items don't get ignored
+            for wcid in ignore_wcids:
+                if wcid in monster_wcids or wcid in item_wcids:
+                    pass
+                else:
+                    my_list.append(wcid)
+
+            # remove whatever's in the ignore wcid list
+            cleaned_list = self.pcap_converter.get_clean_list(self.filtered_list, my_list)
 
             # make links
             monster_links = self.pcap_converter.get_links(cleaned_list, mgen_wcid, "Monster Generator", monster_wcids,
                                                           mgen_loc)
             item_links = self.pcap_converter.get_links(cleaned_list, igen_wcid, "Item Generator", item_wcids, igen_loc)
 
-            landblock_desc = None
+            landblock_desc = "NA"
             if len(self.view.top_panel.desc_entry.get()) > 0:
                 landblock_desc = self.view.top_panel.desc_entry.get()
-            else:
-                showerror("Error", "The landblock description is required.")
-                return
 
             nickname = "Asheron"
             if len(self.view.top_panel.nickname_entry.get()) > 0:
                 nickname = self.view.top_panel.nickname_entry.get()
 
-            self.pcap_converter.output_map(nickname, landblock_desc, cleaned_list, monster_links, item_links)
+            file_name = self.pcap_converter.output_map(nickname, landblock_desc, cleaned_list, monster_links,
+                                                       item_links)
 
-            # output what it's opening to console
-            self.view.console.text_area.configure(state='normal')
-            self.view.console.text_area.delete('1.0', tk.END)
-            self.view.console.text_area.insert('1.0', "Done")
-            self.view.console.text_area.configure(state='disabled')
+            self.view.console.output("Done making GDLE spawn map.")
+            self.view.console.output("Converting to ACE...")
+            gdle_to_ace.convert_spawn_map(file_name)
+            self.view.console.output("Done.")
 
 
 # use to inspect a landblock
@@ -258,7 +278,7 @@ class Toolbar:
     def __init__(self, parent, cont):
         self.frame = tk.Frame(parent)
 
-        inspect_label = tk.Label(self.frame, text="Make GDLE Spawn Map", font="Arial 12")
+        inspect_label = tk.Label(self.frame, text="Make Spawn Map", font="Arial 12")
         open_pcap_button = tk.Button(self.frame, text="Open PCAP", command=cont.open_landblock_pcap)
 
         threshold_label = tk.Label(self.frame, text="Seen more than")
@@ -302,9 +322,9 @@ class BottomPanel:
                     file_list.append(file)
 
         for file_name in file_list:
-            print("Working on " + file_name + "...")
-            gdle_to_ace.convert_spawn_map(file_folder, file_name)
-            print("Done.")
+            self.cont.view.console.output("Converting " + file_name + " to ACE...")
+            gdle_to_ace.batch_convert_spawn_map(file_folder, file_name)
+            self.cont.view.console.output("Done.")
 
     def get_wcid_set(self, entries):
         # TODO revise this since no longer using entries, using listboxes instead

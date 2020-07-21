@@ -4,6 +4,7 @@ from weenie import GeneratorLink
 from weenie import LandblockEntry
 from weenie import LandblockLoc
 
+import gdle_to_ace
 
 class PcapConverter:
 
@@ -263,5 +264,9 @@ class PcapConverter:
 
         my_json = my_json + ']},"desc": "' + land_desc + '", "modifiedBy": "' + nickname + '", "changeLog": [], "isDone": false }'
 
-        with open(str(self.landblock_4) + '.json', 'w') as file_object:
+        file_name = str(self.landblock_4) + '.json'
+
+        with open(file_name, 'w') as file_object:
             file_object.write(my_json)
+
+        return file_name
