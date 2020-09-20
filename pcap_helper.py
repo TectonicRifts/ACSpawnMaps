@@ -134,8 +134,13 @@ def get_wcid(command):
 def get_name(command):
     split_entry = command.split("\n")
     if "VALUES" in split_entry[1]:
-        asterisk_split = split_entry[1].split("*")
-        return asterisk_split[1].strip()
+        try:
+            asterisk_split = split_entry[1].split("*")
+            my_data = asterisk_split[1].strip()
+        except IndexError:
+            my_data = "Placeholder Name"
+
+        return my_data
 
 
 def get_cell_id(command):
