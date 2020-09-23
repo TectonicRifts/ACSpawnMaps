@@ -200,9 +200,23 @@ class LandblockEntry:
         if self.ox == 0.0:
             self.ox = 0
         if self.oy == 0.0:
-            self.ox = 0
+            self.oy = 0
         if self.oz == 0.0:
-            self.ox = 0
+            self.oz = 0
+
+        if self.ox == 1.0:
+            self.ox = 1
+        if self.oy == 1.0:
+            self.oy = 1
+        if self.oz == 1.0:
+            self.oz = 1
+
+        if self.ox == -1.0:
+            self.ox = -1
+        if self.oy == -1.0:
+            self.oy = -1
+        if self.oz == -1.0:
+            self.oz = -1
 
         self.aw = angles[0]
         self.ax = angles[1]
@@ -217,6 +231,24 @@ class LandblockEntry:
             self.ay = 0
         if self.az == 0.0:
             self.az = 0
+
+        if self.aw == 1.0:
+            self.aw = 1
+        if self.ax == 1.0:
+            self.ax = 1
+        if self.ay == 1.0:
+            self.ay = 1
+        if self.az == 1.0:
+            self.az = 1
+
+        if self.aw == -1.0:
+            self.aw = -1
+        if self.ax == -1.0:
+            self.ax = -1
+        if self.ay == -1.0:
+            self.ay = -1
+        if self.az == -1.0:
+            self.az = -1
 
         self.is_link_child = False
         self.last_modified = last_modified

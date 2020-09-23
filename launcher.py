@@ -447,7 +447,7 @@ def main():
     if os.name == 'nt':
         windll.shcore.SetProcessDpiAwareness(1)
 
-    version = 0.2
+    version = 0.3
     root = tk.Tk()
     root.title("AC Spawn Maps " + str(version))
     Controller(root)
