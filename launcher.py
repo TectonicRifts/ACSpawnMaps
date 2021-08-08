@@ -9,7 +9,6 @@ import platform
 import subprocess
 import pcap_helper
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 # output console
