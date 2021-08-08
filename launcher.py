@@ -8,6 +8,8 @@ from pathlib import Path
 import platform
 import subprocess
 import pcap_helper
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 # output console
@@ -19,11 +21,20 @@ class Console:
         self.text_area = tk.scrolledtext.ScrolledText(self.frame, height=10, width=50, undo=True)
         self.text_area.configure(state='disabled')
 
-        self.text_area.grid(row=0, column=0, padx=5, pady=5)
+        clear_button = tk.Button(self.frame, text="Clear", command=self.clear)
+
+        self.text_area.grid(row=0, column=0)
+        clear_button.grid(row=1, column=0, padx=5, pady=5, sticky="e")
 
     def output(self, s):
         self.text_area.configure(state='normal')
         self.text_area.insert(tk.INSERT, s + "\n")
+        self.text_area.yview(tk.END)
+        self.text_area.configure(state='disabled')
+
+    def clear(self):
+        self.text_area.configure(state='normal')
+        self.text_area.delete('1.0', tk.END)
         self.text_area.configure(state='disabled')
 
 
@@ -32,29 +43,6 @@ class SelectionPanel:
 
     def __init__(self, parent, cont):
         self.frame = tk.Frame(parent)
-
-        """
-        # monster generator wcid combo boxe
-        mgen_combo_label = tk.Label(self.frame, text="Monster generator WCID")
-        self.mgen_combo = ttk.Combobox(self.frame, values=["7924"], font=norm_font)
-        self.mgen_combo.current(0)
-
-        # monster generator loc entry
-        mgen_loc_label = tk.Label(self.frame, text="Monster generator /myloc paste")
-        self.mgen_loc_entry = tk.Entry(self.frame, bg="white", font=norm_font)
-
-        # item generator wcid combo box
-        igen_entry_label = tk.Label(self.frame, text="Item generator WCID")
-        self.igen_combo = ttk.Combobox(self.frame, values=["5085"], font=norm_font)
-        self.igen_combo.current(0)
-
-        # set the font of the dropdown list of the combo boxes
-        self.frame.option_add('*TCombobox*Listbox.font', norm_font)
-
-        # item generator loc entry
-        igen_loc_label = tk.Label(self.frame, text="Item generator /myloc paste")
-        self.igen_loc_entry = tk.Entry(self.frame, bg="white", font=norm_font)
-        """
 
         # monster selection listbox
         mob_listbox_label = tk.Label(self.frame, text="Select Monsters", font=norm_font)
@@ -75,17 +63,8 @@ class SelectionPanel:
         self.ignore_listbox = my_tuple[1]
 
         # layout
-        # mgen_combo_label.grid(row=0, column=0, padx=5, pady=5)
-        # self.mgen_combo.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
-        # mgen_loc_label.grid(row=2, column=0, padx=5, pady=5)
-        # self.mgen_loc_entry.grid(row=3, column=0, padx=5, pady=5, sticky="ew")
         mob_listbox_label.grid(row=0, column=0, padx=5, pady=5)
         mob_frame.grid(row=1, column=0, padx=5, pady=5)
-
-        # igen_entry_label.grid(row=0, column=1, padx=5, pady=5)
-        # self.igen_combo.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
-        # igen_loc_label.grid(row=2, column=1, padx=5, pady=5)
-        # self.igen_loc_entry.grid(row=3, column=1, padx=5, pady=5, sticky="ew")
         item_listbox_label.grid(row=0, column=1, padx=5, pady=5)
         item_frame.grid(row=1, column=1, padx=5, pady=5)
 
@@ -131,7 +110,16 @@ class TopPanel:
         self.frame = tk.Frame(parent)
         self.cont = cont
 
-        header_label = tk.Label(self.frame, text="Keep", font=norm_font)
+        self.by_proximity = tk.IntVar(value=1)
+        proximity_check_box = tk.Checkbutton(self.frame, text="Remove by Proximity",
+                                             variable=self.by_proximity, font=norm_font)
+        self.by_range = tk.IntVar(value=0)
+        range_check_box = tk.Checkbutton(self.frame, text="Keep in Range (all fields required)",
+                                         variable=self.by_range, font=norm_font)
+
+        self.proximity_entry = tk.Entry(self.frame, bg="white", font=norm_font)
+        self.proximity_entry.insert(0, 2)  # default of 2
+
         min_header = tk.Label(self.frame, text="min", font=norm_font)
         max_header = tk.Label(self.frame, text="max", font=norm_font)
 
@@ -148,68 +136,65 @@ class TopPanel:
         self.z_max_entry = tk.Entry(self.frame, bg="white", font=norm_font)
 
         filter_button = tk.Button(self.frame, text="Apply", command=self.apply_filter)
-        reset_button = tk.Button(self.frame, text="Reset", command=self.reset_filter)
 
         # layout
-        header_label.grid(row=0, column=0, padx=5, pady=5)
-        min_header.grid(row=1, column=1, padx=5, pady=5)
-        max_header.grid(row=1, column=2, padx=5, pady=5)
-        x_label.grid(row=2, column=0, padx=5, pady=5)
-        self.x_min_entry.grid(row=2, column=1, padx=5, pady=5)
-        self.x_max_entry.grid(row=2, column=2, padx=5, pady=5)
-        y_label.grid(row=3, column=0, padx=5, pady=5)
-        self.y_min_entry.grid(row=3, column=1, padx=5, pady=5)
-        self.y_max_entry.grid(row=3, column=2, padx=5, pady=5)
-        z_label.grid(row=4, column=0, padx=5, pady=5)
-        self.z_min_entry.grid(row=4, column=1, padx=5, pady=5)
-        self.z_max_entry.grid(row=4, column=2, padx=5, pady=5)
-        filter_button.grid(row=5, column=2, padx=5, pady=5, sticky="e")
-        reset_button.grid(row=5, column=3, padx=5, pady=5, sticky="e")
-
-    def reset_filter(self):
-        self.cont.x_min = None
-        self.cont.y_min = None
-        self.cont.z_min = None
-
-        self.cont.x_max = None
-        self.cont.y_max = None
-        self.cont.z_max = None
-
-        self.cont.filter_landblock()
+        proximity_check_box.grid(row=0, column=0, padx=5, pady=5, columnspan=2, sticky="w")
+        self.proximity_entry.grid(row=0, column=2, padx=5, pady=5)
+        range_check_box.grid(row=2, column=0, padx=5, pady=5, columnspan=2, sticky="w")
+        min_header.grid(row=3, column=1, padx=5, pady=5)
+        max_header.grid(row=3, column=2, padx=5, pady=5)
+        x_label.grid(row=4, column=0, padx=5, pady=5)
+        self.x_min_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.x_max_entry.grid(row=4, column=2, padx=5, pady=5)
+        y_label.grid(row=5, column=0, padx=5, pady=5)
+        self.y_min_entry.grid(row=5, column=1, padx=5, pady=5)
+        self.y_max_entry.grid(row=5, column=2, padx=5, pady=5)
+        z_label.grid(row=6, column=0, padx=5, pady=5)
+        self.z_min_entry.grid(row=6, column=1, padx=5, pady=5)
+        self.z_max_entry.grid(row=6, column=2, padx=5, pady=5)
+        filter_button.grid(row=7, column=2, padx=5, pady=5, sticky="e")
 
     def apply_filter(self):
 
-        x_min = self.x_min_entry.get().strip()
-        x_max = self.x_max_entry.get().strip()
-        if x_min == "" or x_max == "":
-            self.cont.x_min = None
-            self.cont.x_max = None
-        else:
-            if self.is_number(x_min) and self.is_number(x_max):
-                self.cont.x_min = x_min
-                self.cont.x_max = x_max
+        if self.by_proximity.get() == 1:
 
-        y_min = self.y_min_entry.get().strip()
-        y_max = self.y_max_entry.get().strip()
-        if y_min == "" or y_max == "":
-            self.cont.y_min = None
-            self.cont.y_max = None
-        else:
-            if self.is_number(y_min) and self.is_number(y_max):
-                self.cont.y_min = y_min
-                self.cont.y_max = y_max
+            proximity = self.proximity_entry.get().strip()
+            if self.is_number(proximity):
+                self.cont.filter_by_proximity(self.cont.filtered_list, int(proximity))
 
-        z_min = self.z_min_entry.get().strip()
-        z_max = self.z_max_entry.get().strip()
-        if z_min == "" or z_max == "":
-            self.cont.z_min = None
-            self.cont.z_max = None
-        else:
-            if self.is_number(z_min) and self.is_number(z_max):
-                self.cont.z_min = z_min
-                self.cont.z_max = z_max
+        if self.by_range.get() == 1:
 
-        self.cont.filter_landblock()
+            x_min = self.x_min_entry.get().strip()
+            x_max = self.x_max_entry.get().strip()
+            if x_min == "" or x_max == "":
+                self.cont.x_min = None
+                self.cont.x_max = None
+            else:
+                if self.is_number(x_min) and self.is_number(x_max):
+                    self.cont.x_min = int(x_min)
+                    self.cont.x_max = int(x_max)
+
+            y_min = self.y_min_entry.get().strip()
+            y_max = self.y_max_entry.get().strip()
+            if y_min == "" or y_max == "":
+                self.cont.y_min = None
+                self.cont.y_max = None
+            else:
+                if self.is_number(y_min) and self.is_number(y_max):
+                    self.cont.y_min = int(y_min)
+                    self.cont.y_max = int(y_max)
+
+            z_min = self.z_min_entry.get().strip()
+            z_max = self.z_max_entry.get().strip()
+            if z_min == "" or z_max == "":
+                self.cont.z_min = None
+                self.cont.z_max = None
+            else:
+                if self.is_number(z_min) and self.is_number(z_max):
+                    self.cont.z_min = int(z_min)
+                    self.cont.z_max = int(z_max)
+
+            self.cont.filter_by_range(self.cont.filtered_list)
 
     def is_number(self, val):
         try:
@@ -244,6 +229,7 @@ class Controller:
     def __init__(self, parent):
 
         self.view = View(parent, self)
+        self.unfiltered_list = []
         self.filtered_list = []
 
         # this is the sql file (i.e., sql commands) currently being worked on
@@ -295,17 +281,39 @@ class Controller:
 
                 # this is the output file name
                 self.sql_output = os.path.split(my_file)[1]
-                self.filter_landblock()
+
+                for command in self.sql_commands:
+                    self.unfiltered_list.append(pcap_helper.get_landblock_entry(command))
+
+                self.unfiltered_list.sort(key=lambda x: x.name, reverse=True)
+                self.filtered_list = self.unfiltered_list
+
+                self.landblock_stats()
+                self.show_entries()
+
+    def landblock_stats(self):
+
+        self.view.console.clear()
+        self.view.console.output("Loaded landblock: " + str(self.sql_output))
+        total_entries = len(self.filtered_list)
+        self.view.console.output("Total entries: " + str(total_entries))
+
+        xs = []
+        ys = []
+        zs = []
+        for entry in self.filtered_list:
+            xs.append(entry.ox)
+            ys.append(entry.oy)
+            zs.append(entry.oz)
+
+        self.view.console.output("x min: " + str(round(min(xs), 2)))
+        self.view.console.output("x max: " + str(round(max(xs), 2)))
+        self.view.console.output("y min: " + str(round(min(ys), 2)))
+        self.view.console.output("y max: " + str(round(max(ys), 2)))
+        self.view.console.output("z min: " + str(round(min(zs), 2)))
+        self.view.console.output("z max: " + str(round(max(zs), 2)))
 
     def save_sql(self):
-
-        self.x_min = None
-        self.y_min = None
-        self.z_min = None
-
-        self.x_max = None
-        self.y_max = None
-        self.z_max = None
 
         Path("output/").mkdir(parents=True, exist_ok=True)
 
@@ -331,34 +339,77 @@ class Controller:
         else:
             tk.messagebox.showinfo("Info", "There was no file to save.")
 
-    def filter_landblock(self):
-
-        landblock_entries = []
-
-        for command in self.sql_commands:
-            landblock_entries.append(pcap_helper.get_landblock_entry(command))
-
-        landblock_entries.sort(key=lambda x: x.name, reverse=True)
-        self.filtered_list = pcap_helper.filter_by_distance(landblock_entries)
-
-        if self.x_min and self.x_max:
-            self.filtered_list = pcap_helper.filter_by_x(self.filtered_list, float(self.x_min), float(self.x_max))
-
-        if self.y_min and self.x_max:
-            self.filtered_list = pcap_helper.filter_by_y(self.filtered_list, float(self.y_max), float(self.y_max))
-
-        if self.z_min and self.z_max:
-            self.filtered_list = pcap_helper.filter_by_z(self.filtered_list, float(self.z_min), float(self.z_max))
-
+    def reset_all_filters(self):
+        self.filtered_list = self.unfiltered_list
         self.show_entries()
+        self.view.console.output("All filters have been reset.")
 
-    def show_entries(self):
+    def filter_by_proximity(self, landblock_entries, proximity):
+        filtered_entries = pcap_helper.filter_by_proximity(landblock_entries, proximity)
+        total_removed = len(landblock_entries) - len(filtered_entries)
+        self.view.console.output("Filter by proximity removed: " + str(total_removed))
+        self.filtered_list = filtered_entries
+
+    def filter_by_range(self, landblock_entries):
+
+        filtered_entries = pcap_helper.filter_by_range(landblock_entries,
+                                                       self.x_min, self.x_max,
+                                                       self.y_min, self.y_max,
+                                                       self.z_min, self.z_max)
+
+        total_removed = len(landblock_entries) - len(filtered_entries)
+        self.view.console.output("Filter by range removed: " + str(total_removed))
+        self.filtered_list = filtered_entries
+
+    def plot_landblock(self):
+
+        unfiltered_len = len(self.unfiltered_list)
+        filtered_len = len(self.filtered_list)
+
+        if unfiltered_len > 0:
+            fig = plt.figure(figsize=(8, 8))
+            ax = fig.add_subplot(111, projection='3d')
+            my_xs = []
+            my_ys = []
+            my_zs = []
+            group = []
+            for entry in self.unfiltered_list:
+                my_xs.append(entry.ox)
+                my_ys.append(entry.oy)
+                my_zs.append(entry.oz)
+
+                if unfiltered_len != filtered_len:
+                    if entry in self.filtered_list:
+                        group.append(1)
+                    else:
+                        group.append(0)
+
+            if len(group) > 0:
+                my_plot = ax.scatter(xs=my_xs, ys=my_ys, zs=my_zs, cmap="coolwarm", c=group)
+                cb = plt.colorbar(my_plot, pad=0.2)
+                cb.set_ticks([0, 1])
+                cb.set_ticklabels(["Remove", "Keep"])
+            else:
+                ax.scatter(xs=my_xs, ys=my_ys, zs=my_zs)
+
+            ax.set_title(str(self.sql_output))
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            ax.set_zlabel("Z")
+
+            plt.show()
+        else:
+            self.view.console.output("There was nothing to plot.")
+
+    def get_unique_entries(self):
         uniques = {}
-
-        # only keep unique wcids for clarity, this is used for view only
+        # return unique wcids with names for clarity, used for view
         for entry in self.filtered_list:
             uniques[entry.wcid] = entry
+        return uniques
 
+    def show_entries(self):
+        uniques = self.get_unique_entries()
         listbox_list = self.view.selection_panel.get_list_boxes()
 
         # clear listboxes
@@ -366,15 +417,22 @@ class Controller:
             listbox.delete(0, tk.END)
 
         # add entries
+        i = 0
         for wcid, entry in sorted(uniques.items()):  # sort and output
-            i = 0
 
+            entry_formatted = str(wcid) + "," + str(entry.name)
             for listbox in listbox_list:
-                listbox.insert(i, str(wcid) + ',' + str(entry.name))
-                i += 1
+                listbox.insert(i, entry_formatted)
+            i += 1
+
+    def print_entries(self):
+        uniques = self.get_unique_entries()
+        i = 0
+        for wcid, entry in sorted(uniques.items()):  # sort and output
+            entry_formatted = str(wcid) + "," + str(entry.name)
+            self.view.console.output(entry_formatted)
 
     def make_map(self):
-
         if self.filtered_list:
 
             mob_wcids = self.view.selection_panel.get_selected(self.view.selection_panel.mob_listbox)
@@ -430,13 +488,19 @@ class Toolbar:
         self.frame = tk.Frame(parent)
 
         open_button = tk.Button(self.frame, text="Open", command=cont.open_file)
+        plot_button = tk.Button(self.frame, text="Plot", command=cont.plot_landblock)
+        reset_button = tk.Button(self.frame, text="Reset", command=cont.reset_all_filters)
+        print_button = tk.Button(self.frame, text="Print", command=cont.print_entries)
         save_button = tk.Button(self.frame, text="Save", command=cont.make_map)
         output_button = tk.Button(self.frame, text="Files", command=cont.open_output_folder)
 
         # layout
         open_button.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-        save_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
-        output_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        plot_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        print_button.grid(row=0, column=3, padx=5, pady=5, sticky="ew")
+        save_button.grid(row=0, column=4, padx=5, pady=5, sticky="ew")
+        output_button.grid(row=0, column=5, padx=5, pady=5, sticky="ew")
 
 
 norm_font = ("Arial", 12)
@@ -447,7 +511,7 @@ def main():
     if os.name == 'nt':
         windll.shcore.SetProcessDpiAwareness(1)
 
-    version = 0.3
+    version = 0.4
     root = tk.Tk()
     root.title("AC Spawn Maps " + str(version))
     Controller(root)

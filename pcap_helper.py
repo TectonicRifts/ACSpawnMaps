@@ -37,7 +37,7 @@ def get_links(filtered_list, parent_guid, wcid_set):
     return entry
 
 
-def filter_by_distance(landblock_entries):
+def filter_by_proximity(landblock_entries, proximity):
     filtered_list = landblock_entries.copy()
     to_remove = []
 
@@ -54,7 +54,7 @@ def filter_by_distance(landblock_entries):
                     pass
                 else:
                     d = calc_distance(i, j)
-                    if d < 2:
+                    if d < proximity:
                         if i in to_remove or j in to_remove:
                             pass
                         else:
@@ -72,34 +72,12 @@ def calc_distance(p1, p2):
     return d
 
 
-def filter_by_x(landblock_entries, x_min, x_max):
-    """Keep only weenies with an origin x less than the threshold."""
+def filter_by_range(landblock_entries, x_min, x_max, y_min, y_max, z_min, z_max):
+
     filtered_list = []
 
     for entry in landblock_entries:
-        if x_min <= entry.ox <= x_max:
-            filtered_list.append(entry)
-
-    return filtered_list
-
-
-def filter_by_y(landblock_entries, y_min, y_max):
-    """Keep only weenies with an origin y less than the threshold."""
-    filtered_list = []
-
-    for entry in landblock_entries:
-        if y_min <= entry.oy <= y_max:
-            filtered_list.append(entry)
-
-    return filtered_list
-
-
-def filter_by_z(landblock_entries, z_min, z_max):
-    """Keep only weenies with an origin z less than the threshold."""
-    filtered_list = []
-
-    for entry in landblock_entries:
-        if z_min <= entry.oz <= z_max:
+        if (x_max >= entry.ox >= x_min) and (y_max >= entry.oy >= y_min) and (z_max >= entry.oz >= z_min):
             filtered_list.append(entry)
 
     return filtered_list
